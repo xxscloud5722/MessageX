@@ -6,7 +6,6 @@ import com.xxscloud.messagex.config.ApiResponse
 import com.xxscloud.messagex.config.USession
 import com.xxscloud.messagex.data.UserDO
 import com.xxscloud.messagex.exception.ParameterException
-import com.xxscloud.messagex.module.BaseModule
 import com.xxscloud.messagex.service.UserService
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
@@ -16,10 +15,10 @@ class UserModule @Inject constructor(router: Router, private val userService: Us
 
 
     init {
-        addRouter(router.post("/open/user/registered")).coroutineHandler(5000L, ::registered)
+        addRouter(router.post("/open/user/registered")).coroutineHandler( ::registered)
 
-        addRouter(router.post("/user/getUserInfo")).coroutineHandler(5000L, ::getUserInfo)
-        addRouter(router.post("/user/checkToken")).coroutineHandler(5000L, ::checkToken)
+        addRouter(router.post("/user/getUserInfo")).coroutineHandler( ::getUserInfo)
+        addRouter(router.post("/user/checkToken")).coroutineHandler( ::checkToken)
     }
 
     private suspend fun registered(content: RoutingContext) {

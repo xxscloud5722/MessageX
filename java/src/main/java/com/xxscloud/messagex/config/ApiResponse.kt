@@ -1,12 +1,18 @@
 package com.xxscloud.messagex.config
 
 
-import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonToken
-import com.google.gson.stream.JsonWriter
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.module.SimpleModule
+import io.vertx.core.json.JsonArray
+import io.vertx.core.json.JsonObject
 import java.math.BigDecimal
+import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 data class ApiResponse(
@@ -16,70 +22,50 @@ data class ApiResponse(
         val message: String? = null,
         val other: Any? = null
 ) {
-
-
-    class DoubleTypeAdapter : TypeAdapter<Double>() {
-        override fun write(out: JsonWriter, value: Double?) {
-            if (value == null) {
-                out.nullValue()
-                return
-            }
-            out.value(value)
-        }
-
-        override fun read(value: JsonReader): Double? {
-            if (value.peek() == JsonToken.NULL) {
-                return null
-            }
-            return value.nextDouble()
-        }
-
-    }
-
-
-    class BigDecimalTypeAdapter : TypeAdapter<BigDecimal>() {
-        override fun write(out: JsonWriter, value: BigDecimal?) {
-            if (value == null) {
-                out.nullValue()
-                return
-            }
-            out.value(value.setScale(2, BigDecimal.ROUND_DOWN))
-        }
-
-        override fun read(value: JsonReader): BigDecimal? {
-            if (value.peek() == JsonToken.NULL) {
-                return null
-            }
-            return BigDecimal.valueOf(value.nextDouble())
-        }
-
-    }
-
-    class StringTypeAdapter : TypeAdapter<String>() {
-        override fun write(out: JsonWriter, value: String?) {
-            if (value.isNullOrEmpty()) {
-                out.nullValue()
-                return
-            }
-            out.value(value)
-        }
-
-        override fun read(value: JsonReader): String? {
-            if (value.peek() == JsonToken.NULL) {
-                return null
-            }
-            return value.nextString()
-        }
-
-    }
-
-
     companion object {
-        private val GSON = GsonBuilder()
-                .registerTypeAdapter(Double::class.java, DoubleTypeAdapter())
-                .registerTypeAdapter(BigDecimal::class.java, BigDecimalTypeAdapter())
-                .registerTypeAdapter(String::class.java, StringTypeAdapter())
-                .setDateFormat("yyyy-MM-dd HH:mm:ss").create()
+        private val objectMapper: ObjectMapper = ObjectMapper()
+
+        init {
+            val module = SimpleModule()
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+            module.addSerializer(JsonObject::class.java, object : JsonSerializer<JsonObject>() {
+                override fun serialize(value: JsonObject?, gen: JsonGenerator?, serializers: SerializerProvider?) {
+                    if (value?.map?.size ?: 0 > 0) {
+                        gen?.writeObject(value?.map)
+                    } else {
+                        gen?.writeNull()
+                    }
+                }
+            })
+            module.addSerializer(JsonArray::class.java, object : JsonSerializer<JsonArray>() {
+                override fun serialize(value: JsonArray?, gen: JsonGenerator?, serializers: SerializerProvider?) {
+                    if (value?.list?.size ?: 0 > 0) {
+                        gen?.writeObject(value?.list)
+                    } else {
+                        gen?.writeNull()
+                    }
+                }
+            })
+            module.addSerializer(Date::class.java, object : JsonSerializer<Date>() {
+                override fun serialize(value: Date?, gen: JsonGenerator?, serializers: SerializerProvider?) {
+                    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                    gen?.writeObject(formatter.format(value))
+                }
+            })
+            module.addSerializer(BigDecimal::class.java, object : JsonSerializer<BigDecimal>() {
+                override fun serialize(value: BigDecimal?, gen: JsonGenerator?, serializers: SerializerProvider?) {
+                    val formatter = DecimalFormat("#0.00000000")
+                    gen?.writeObject(formatter.format(value))
+                }
+            })
+            module.addSerializer(Double::class.java, object : JsonSerializer<Double>() {
+                override fun serialize(value: Double?, gen: JsonGenerator?, serializers: SerializerProvider?) {
+                    val formatter = DecimalFormat("#0.00000000")
+                    gen?.writeObject(formatter.format(value))
+                }
+            })
+            objectMapper.registerModule(module)
+        }
 
 
         fun error(message: String): ApiResponse {
@@ -105,10 +91,12 @@ data class ApiResponse(
         fun success(data: Any?, message: String?): ApiResponse {
             return ApiResponse(true, data, "200", message)
         }
+
+
     }
 
     override fun toString(): String {
-        return GSON.toJson(this)
+        return objectMapper.writeValueAsString(this)
     }
 
 }

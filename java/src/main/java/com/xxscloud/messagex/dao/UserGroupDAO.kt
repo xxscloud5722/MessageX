@@ -1,7 +1,8 @@
 package com.xxscloud.messagex.dao
 
 import com.google.inject.Inject
-import com.xxscloud.messagex.core.MySQLCore
+import com.xxscloud.messagex.core.xxs.MySQLCore
+import com.xxscloud.messagex.core.xxs.SQL
 import com.xxscloud.messagex.data.UserDO
 import com.xxscloud.messagex.data.UserGroupDO
 import io.vertx.ext.sql.SQLConnection
@@ -39,9 +40,7 @@ class UserGroupDAO @Inject constructor(private val sqlCore: MySQLCore) {
 
     suspend fun getGroupAllList(transaction: SQLConnection? = null): List<UserGroupDO> {
         return sqlCore.query(
-            """
-                SELECT * FROM m_user_group
-            """.trimIndent(), UserGroupDO::class.java, transaction
+            SQL("SELECT * FROM m_user_group"), UserGroupDO::class.java, transaction
         )
     }
 

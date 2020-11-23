@@ -2,10 +2,10 @@ package com.xxscloud.messagex.core
 
 import com.xxscloud.messagex.config.Config
 import com.xxscloud.messagex.config.USession
-import com.xxscloud.messagex.data.ChannelDO
+import com.xxscloud.messagex.core.xxs.MySQLCore
+import com.xxscloud.messagex.core.xxs.RedisCore
 import com.xxscloud.messagex.data.UserDO
 import com.xxscloud.messagex.exception.CoreException
-import com.xxscloud.messagex.exception.ParameterException
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
@@ -24,7 +24,17 @@ import org.apache.commons.codec.digest.DigestUtils
 class TokenProvider {
     companion object {
         private val TOKEN_PROVIDER = TokenProvider()
-        private val F = arrayListOf("/user/login")
+        private val F = arrayListOf(
+                "/",
+                "/favicon.ico",
+
+                "/upload",
+
+
+                "/admin/system/login",
+                "/admin/system/upload",
+        )
+        private val Q = arrayListOf("/open/")
 
         fun Route.authenticateHandler(role: String): Route {
             return handler { ctx ->
@@ -42,94 +52,92 @@ class TokenProvider {
         fun Route.checkToken(): Route {
             return handler { ctx ->
                 GlobalScope.launch(ctx.vertx().dispatcher()) {
-                    val token = ctx.request().headers()["token"]
-                    //如果没有token直接返回
-                    if (token.isNullOrEmpty()) {
+                    //如果过滤的地址
+                    if (F.contains(ctx.request().path())) {
                         ctx.next()
                         return@launch
                     }
-
-                    //如果过滤的地址
-                    if (F.contains(ctx.request().path())) {
+                    val flag = Q.find { ctx.request().path().startsWith(it) }
+                    if (flag != null) {
+                        ctx.next()
+                        return@launch
+                    }
+                    val token = ctx.request().headers()["token"] ?: ctx.request().getParam("token")
+                    //如果没有token直接返回
+                    if (token.isNullOrEmpty()) {
+                        ctx.fail(CoreException("401\ntoken is null"))
                         return@launch
                     }
 
                     val session = check(token)
-                    if (session == null) {
-                        ctx.fail(500, CoreException("401\ntoken error"))
-                        return@launch
-                    } else {
-                        ctx.next()
-                        return@launch
+                    when {
+                        session == null -> {
+                            ctx.fail(500, CoreException("401\ntoken expired"))
+                            return@launch
+                        }
+                        session.status != 1 -> {
+                            ctx.fail(500, CoreException("401\n您的账号已冻结"))
+                            return@launch
+                        }
+                        else -> {
+                            ctx.request().headers().add("user-id", session.id)
+                            ctx.next()
+                            return@launch
+                        }
                     }
                 }
             }
         }
 
-        fun Route.checkChannel(): Route {
-            return handler { ctx ->
-                GlobalScope.launch(ctx.vertx().dispatcher()) {
-                    val code = ctx.request().headers()["x-code"]
-                    val sign = ctx.request().headers()["x-sign"]
-                    val timestamp = ctx.request().headers()["x-timestamp"]
-                    //如果没有token直接返回
-                    if (code.isNullOrEmpty() || sign.isNullOrEmpty() || timestamp.isNullOrEmpty()) {
-                        ctx.fail(401, ParameterException("401\nx-code,x-sign,x-timestamp error"))
-                        return@launch
-                    }
 
-                    //查询数据库获取数据
-                    val channel = MySQLCore.getCore().queryFirst(
-                        """
-                            SELECT * FROM m_channel WHERE code = ?
-                        """, arrayListOf(code), ChannelDO::class.java
-                    )
-                    //如果查询不到渠道
-                    if (channel == null) {
-                        ctx.fail(401, CoreException("401\nchannel error"))
-                        return@launch
-                    }
-
-                    //如果签名不正确
-                    if (DigestUtils.md5Hex(code + timestamp + channel.key) != sign) {
-                        ctx.fail(401, CoreException("401\nsign error"))
-                        return@launch
-                    }
-
-                    //继续执行
-                    ctx.next()
-                    return@launch
-                }
-            }
-        }
-
-
-
-        suspend fun check(token: String): USession? {
+        private suspend fun check(token: String): USession? {
             //如果有token 则去数据库查询
             val tokens = token.split("_")
             if (tokens.size <= 1) {
                 return null
             }
 
+
             //查询redis
-            if (RedisCore.getCore().exists(tokens[1])) {
-                RedisCore.getCore().expire(tokens[1], Config.R_T_30M)
-                return RedisCore.getCore().getJsonObject(tokens[1], USession::class.java)
+            if (RedisCore.getCore().exists(token)) {
+                RedisCore.getCore().expire(token, Config.R_T_30M)
+                return RedisCore.getCore().getJsonObject(token, USession::class.java)
             }
 
             //查询数据库
             val session = USession()
-            val user = MySQLCore.getCore().queryFirst(
-                """
-                        SELECT * FROM m_user WHERE token = ?
-                    """, arrayListOf(tokens[1]), UserDO::class.java
-            )
-            user?.let {
-                session.id = user.id
-                session.account = user.account
-                session.token = user.token
-                RedisCore.getCore().setex(tokens[1], Config.R_T_30M, Json.encode(session))
+
+            when (tokens[0]) {
+//                "ADMIN" -> {
+//                    val user = MySQLCore.getCore().queryFirst(
+//                            """
+//                        SELECT * FROM system_admin_user WHERE token = ?
+//                    """,
+//                            arrayListOf(token),
+//                            AdminUserDO::class.java
+//                    )
+//                    user?.let {
+//                        session.id = user.id
+//                        session.account = user.account
+//                        session.token = user.token
+//                        RedisCore.getCore().setex(token, Config.R_T_30M, Json.encode(session))
+//                    }
+//                }
+                "API" -> {
+                    val user = MySQLCore.getCore().queryFirst(
+                            """
+                        SELECT * FROM e_user WHERE token = ?
+                    """,
+                            arrayListOf(token),
+                            UserDO::class.java
+                    )
+                    user?.let {
+                        session.id = user.id
+                        session.token = user.token
+                        session.status = user.status
+                        RedisCore.getCore().setex(token, Config.R_T_30M, Json.encode(session))
+                    }
+                }
             }
             return if (session.id.isEmpty()) null else session
         }

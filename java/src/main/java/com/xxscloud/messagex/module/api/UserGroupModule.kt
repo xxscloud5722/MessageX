@@ -5,18 +5,16 @@ import com.xxscloud.messagex.config.ApiResponse
 import com.xxscloud.messagex.data.UserGroupDO
 import com.xxscloud.messagex.data.UserGroupDTO
 import com.xxscloud.messagex.exception.ParameterException
-import com.xxscloud.messagex.module.BaseModule
 import com.xxscloud.messagex.service.UserGroupService
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
-import io.vertx.ext.web.handler.TimeoutHandler
 
 class UserGroupModule @Inject constructor(router: Router, private val userGroupService: UserGroupService) : BaseModule() {
     init {
-        addRouter(router.post("/open/userGroup/create")).coroutineHandler(5000L,::create)
-        addRouter(router.post("/open/userGroup/getGroupInfo")).coroutineHandler(5000L,::getGroupInfo)
-        addRouter(router.post("/open/userGroup/getGroupList")).coroutineHandler(5000L,::getGroupList)
-        addRouter(router.post("/open/userGroup/joinGroup")).coroutineHandler(5000L,::joinGroup)
+        addRouter(router.post("/open/userGroup/create")).coroutineHandler(::create)
+        addRouter(router.post("/open/userGroup/getGroupInfo")).coroutineHandler(::getGroupInfo)
+        addRouter(router.post("/open/userGroup/getGroupList")).coroutineHandler(::getGroupList)
+        addRouter(router.post("/open/userGroup/joinGroup")).coroutineHandler(::joinGroup)
     }
 
     private suspend fun create(content: RoutingContext) {

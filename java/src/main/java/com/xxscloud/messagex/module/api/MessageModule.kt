@@ -6,17 +6,15 @@ import com.xxscloud.messagex.config.USession
 import com.xxscloud.messagex.data.MessageDO
 import com.xxscloud.messagex.data.MessageDTO
 import com.xxscloud.messagex.exception.ParameterException
-import com.xxscloud.messagex.module.BaseModule
 import com.xxscloud.messagex.service.MessageService
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
-import io.vertx.ext.web.handler.TimeoutHandler
 
 class MessageModule @Inject constructor(router: Router, private val messageService: MessageService) : BaseModule() {
     init {
-        addRouter(router.post("/open/message/send")).coroutineHandler(5000L, ::send)
-        addRouter(router.post("/message/getContent")).coroutineHandler(5000L, ::getContent)
-        addRouter(router.post("/message/getMessageList")).coroutineHandler(5000L, ::getMessageList)
+        addRouter(router.post("/open/message/send")).coroutineHandler( ::send)
+        addRouter(router.post("/message/getContent")).coroutineHandler( ::getContent)
+        addRouter(router.post("/message/getMessageList")).coroutineHandler( ::getMessageList)
     }
 
     private suspend fun send(context: RoutingContext) {

@@ -1,7 +1,7 @@
 package com.xxscloud.messagex.service
 
 import com.google.inject.Inject
-import com.xxscloud.messagex.core.MySQLCore
+import com.xxscloud.messagex.core.xxs.MySQLCore
 import com.xxscloud.messagex.dao.MessageDAO
 import com.xxscloud.messagex.dao.MessageQueueDAO
 import com.xxscloud.messagex.dao.UserGroupDAO

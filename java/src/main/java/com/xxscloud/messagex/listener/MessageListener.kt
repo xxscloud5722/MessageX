@@ -31,7 +31,7 @@ class MessageListener @Inject constructor(vertx: Vertx, private val messageDAO: 
         val userList = messageQueueDAO.getByMessageId(event.messageId)
         log.info("[消息]: 本次推送人数 ${userList.size}, 内容 ${Json.encode(message)}")
         userList.forEach {
-            WebSocketCore.sendText(it.id, "message ${Json.encode(message)}")
+            //WebSocketCore.sendText(it.id, "message ${Json.encode(message)}")
         }
     }
 }

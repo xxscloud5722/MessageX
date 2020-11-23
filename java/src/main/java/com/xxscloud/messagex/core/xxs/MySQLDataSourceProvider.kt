@@ -1,4 +1,4 @@
-package com.xxscloud.messagex.core
+package com.xxscloud.messagex.core.xxs
 
 import com.alibaba.druid.pool.DruidDataSource
 import io.vertx.core.json.JsonObject
@@ -11,6 +11,11 @@ class MySQLDataSourceProvider : DataSourceProvider {
 
     companion object {
         private lateinit var druid: DruidDataSource
+
+        init {
+            System.setProperty("druid.mysql.usePingMethod", "false")
+        }
+
         fun init(config: JsonObject?) {
             val value = Properties()
             value["druid.name"] = "mysql"
@@ -59,6 +64,8 @@ class MySQLDataSourceProvider : DataSourceProvider {
             config?.getString("connectionInitSqls")?.let {
                 value["druid.connectionInitSqls"] = it
             }
+
+            value["druid.filters"] = "stat,wall"
             config?.getString("filters")?.let {
                 value["druid.filters"] = it
             }
@@ -70,7 +77,7 @@ class MySQLDataSourceProvider : DataSourceProvider {
 
             val druid = DruidDataSource()
             druid.configFromPropety(value)
-            this.druid = druid
+            Companion.druid = druid
         }
     }
 

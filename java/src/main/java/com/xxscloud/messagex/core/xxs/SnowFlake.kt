@@ -1,4 +1,4 @@
-package com.xxscloud.messagex.core
+package com.xxscloud.messagex.core.xxs
 
 class SnowFlake {
 

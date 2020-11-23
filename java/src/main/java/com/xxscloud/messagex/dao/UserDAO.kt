@@ -1,7 +1,7 @@
 package com.xxscloud.messagex.dao
 
 import com.google.inject.Inject
-import com.xxscloud.messagex.core.MySQLCore
+import com.xxscloud.messagex.core.xxs.MySQLCore
 import com.xxscloud.messagex.data.UserDO
 import io.vertx.ext.sql.SQLConnection
 
