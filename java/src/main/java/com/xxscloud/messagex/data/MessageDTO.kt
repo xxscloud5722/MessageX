@@ -11,5 +11,7 @@ data class MessageDTO(
     var content: String = "",
     var abstract: String = "",
     var cover: String = "",
-    var createTime: Date? = null
+    var createTime: Date? = null,
+
+
 )

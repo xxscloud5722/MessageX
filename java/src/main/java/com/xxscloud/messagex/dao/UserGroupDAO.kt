@@ -10,54 +10,75 @@ import io.vertx.ext.sql.SQLConnection
 
 class UserGroupDAO @Inject constructor(private val sqlCore: MySQLCore) {
     suspend fun insert(userGroup: UserGroupDO, transaction: SQLConnection? = null): Boolean {
-        val id = sqlCore.insertLastInsert(
+        val sql = SQL(
             """
-                INSERT INTO `m_user_group`(`name`) 
-                VALUES (?);
-            """.trimIndent(), arrayListOf(userGroup.name), transaction
+                INSERT INTO `m_user_group`(`channel_id`, `name`)VALUES (#{channelId}, #{name})
+            """
         )
+        sql.add(userGroup)
+        val id = sqlCore.insertLastInsert(sql, transaction)
         userGroup.id = id.toString()
         return true
     }
 
     suspend fun getById(id: String, transaction: SQLConnection? = null): UserGroupDO? {
+        val sql = SQL(
+            """
+                 SELECT * FROM m_user_group WHERE id = #{id}
+            """
+        )
+        sql.add("id", id)
         return sqlCore.queryFirst(
-            """
-                SELECT * FROM m_user_group WHERE id = ?
-            """.trimIndent(), arrayListOf(id), UserGroupDO::class.java, transaction
+            sql, UserGroupDO::class.java, transaction
         )
     }
 
-    suspend fun getUserList(id: String, transaction: SQLConnection? = null): List<UserDO> {
-        return sqlCore.query(
+    suspend fun getUserList(groupId: String, transaction: SQLConnection? = null): List<UserDO> {
+        val sql = SQL(
             """
-                SELECT mu.* FROM m_user_group_relationship mugr
+                SELECT mu.id, mu.open_id, mu.nick_name, mu.status FROM m_user_group_relationship mugr
                 LEFT JOIN m_user mu ON mu.id = mugr.user_id
-                WHERE mugr.group_id = ?
-            """.trimIndent(), arrayListOf(id), UserDO::class.java, transaction
+                WHERE mugr.group_id = #{groupId}
+            """
+        )
+        sql.add("groupId", groupId)
+        return sqlCore.query(
+            sql, UserDO::class.java, transaction
         )
     }
 
-    suspend fun getGroupAllList(transaction: SQLConnection? = null): List<UserGroupDO> {
+    suspend fun getGroupAllList(channelId: String, transaction: SQLConnection? = null): List<UserGroupDO> {
+        val sql = SQL(
+            """
+            SELECT * FROM m_user_group WHERE channel_id = #{channelId}
+            """
+        )
+        sql.add("channelId", channelId)
         return sqlCore.query(
-            SQL("SELECT * FROM m_user_group"), UserGroupDO::class.java, transaction
+            sql, UserGroupDO::class.java, transaction
         )
     }
 
     suspend fun joinGroup(groupId: String, userId: String, transaction: SQLConnection? = null): Boolean {
-        return sqlCore.insert(
+        val sql = SQL(
             """
-                INSERT INTO `m_user_group_relationship`(`user_id`, `group_id`) 
-                VALUES (?, ?);
-            """.trimIndent(), arrayListOf(userId, groupId), transaction
+             INSERT INTO `m_user_group_relationship`(`user_id`, `group_id`) VALUES (#{groupId}, #{userId});
+            """
         )
+        sql.add("groupId", groupId)
+        sql.add("userId", userId)
+        return sqlCore.insert(sql, transaction)
     }
 
+
     suspend fun exist(groupId: String, userId: String, transaction: SQLConnection? = null): Boolean {
-        return sqlCore.queryResult(
+        val sql = SQL(
             """
-                SELECT COUNT(*) > 0 FROM `m_user_group_relationship` WHERE user_id = ? AND group_id = ?
-            """.trimIndent(), arrayListOf(userId, groupId), Boolean::class.java, transaction
-        ) ?: false
+             SELECT COUNT(*) > 0 FROM `m_user_group_relationship` WHERE user_id = #{userId} AND group_id = #{groupId};
+            """
+        )
+        sql.add("groupId", groupId)
+        sql.add("userId", userId)
+        return sqlCore.queryResult(sql, Boolean::class.java, transaction) ?: false
     }
 }

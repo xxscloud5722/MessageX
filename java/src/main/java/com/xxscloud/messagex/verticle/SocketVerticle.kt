@@ -35,8 +35,6 @@ class SocketVerticle : CoroutineVerticle() {
             }
         }
         log.info("WebSocket initialization completed")
-
-
     }
 
     private suspend fun webSocketHandler(webSocket: ServerWebSocket, webSocketCore: WebSocketCore, userDAO: UserDAO) {
@@ -46,24 +44,23 @@ class SocketVerticle : CoroutineVerticle() {
             return
         }
 
-        val type = urls[urls.size - 2].toLowerCase()
         val token = urls[urls.size - 1]
         webSocket.writeTextMessage("Loading ...")
 
-//        val user = userDAO.getByToken(token)
-//        if (user == null) {
-//            webSocket.writeTextMessage("Token: $token error")
-//            webSocket.close()
-//            return
-//        }
+        val user = userDAO.getByToken(token)
+        if (user == null) {
+            webSocket.writeTextMessage("Token: $token error")
+            webSocket.close()
+            return
+        }
 
-        webSocket.writeTextMessage("Message System V1.0")
+        webSocket.writeTextMessage("Message（Push）System V1.0")
         //监听关闭事件
         webSocket.closeHandler {
-//            webSocketCore.remove(user.userId)
+            webSocketCore.remove(user.id)
         }
         //添加用户数据
-        //webSocketCore.add(user, webSocket)
+        webSocketCore.add(user, webSocket)
     }
 
 }

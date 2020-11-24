@@ -2,6 +2,7 @@ package com.xxscloud.messagex.dao
 
 import com.google.inject.Inject
 import com.xxscloud.messagex.core.xxs.MySQLCore
+import com.xxscloud.messagex.core.xxs.SQL
 import com.xxscloud.messagex.data.MessageDO
 import com.xxscloud.messagex.data.MessageDTO
 import io.vertx.ext.sql.SQLConnection
@@ -9,12 +10,15 @@ import io.vertx.ext.sql.SQLConnection
 
 class MessageDAO @Inject constructor(private val sqlCore: MySQLCore) {
     suspend fun insert(messageDO: MessageDO, transaction: SQLConnection? = null): Boolean {
-        val id = sqlCore.insertLastInsert(
+        val sql = SQL(
             """
-                INSERT INTO `m_message`( `title`, `abstract`, `cover`, `content`) 
-                VALUES (?, ?, ?, ?);
-            """.trimIndent(),
-            arrayListOf(messageDO.title, messageDO.abstract, messageDO.cover, messageDO.content),
+                 INSERT INTO `m_message`( `title`, `abstract`, `cover`, `content`) 
+                    VALUES (#{title}, #{abstract}, #{cover}, #{content});
+            """
+        )
+        sql.add(messageDO)
+        val id = sqlCore.insertLastInsert(
+            sql,
             transaction
         )
         messageDO.id = id.toString()
@@ -22,30 +26,38 @@ class MessageDAO @Inject constructor(private val sqlCore: MySQLCore) {
     }
 
     suspend fun getById(id: String, transaction: SQLConnection? = null): MessageDO? {
-        return sqlCore.queryFirst(
+        val sql = SQL(
             """
-                SELECT * FROM m_message WHERE id = ?
-            """.trimIndent(), arrayListOf(id), MessageDO::class.java, transaction
+                  SELECT * FROM m_message WHERE id = ?
+            """
+        )
+        sql.add("id", id)
+        return sqlCore.queryFirst(
+            sql, MessageDO::class.java, transaction
         )
     }
 
     suspend fun getMessageList(id: String, messageId: String, transaction: SQLConnection? = null): List<MessageDTO> {
-        val parameter = arrayListOf(id)
-        var sql = """
+        val sql = SQL(
+            """
                 SELECT mm.id, mm.title, mm.abstract, mm.cover, mm.create_time FROM m_message mm
                 LEFT JOIN m_message_queue mmq ON mmq.message_id = mm.id
-                WHERE mmq.user_id = ? AND mmq.status = 0
+                WHERE mmq.user_id = #{id} AND mmq.status = 0
             """
-        if (messageId.isNotEmpty() && messageId.toInt() > 0) {
-            sql += " AND mm.id < ?"
-            parameter.add(messageId)
+        )
+        sql.where {
+            sql.join("AND mm.id < #{messageId}", messageId.isNotEmpty())
         }
-        sql += """ 
+        sql.join(
+            """ 
                 ORDER BY mm.id DESC
                 LIMIT 100
         """
+        )
+        sql.add("id", id)
+        sql.add("messageId", messageId)
         return sqlCore.query(
-            sql, parameter, MessageDTO::class.java, transaction
+            sql, MessageDTO::class.java, transaction
         )
     }
 

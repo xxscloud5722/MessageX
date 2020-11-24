@@ -47,7 +47,7 @@ dependencies {
 
 
     //bean转换
-    compile 'commons-beanutils:commons-beanutils:1.9.4'
+//    compile 'commons-beanutils:commons-beanutils:1.9.4'
     compile 'commons-codec:commons-codec:1.9'
 
 

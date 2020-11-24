@@ -4,6 +4,7 @@ import com.xxscloud.messagex.config.Config
 import com.xxscloud.messagex.config.USession
 import com.xxscloud.messagex.core.xxs.MySQLCore
 import com.xxscloud.messagex.core.xxs.RedisCore
+import com.xxscloud.messagex.data.ChannelDO
 import com.xxscloud.messagex.data.UserDO
 import com.xxscloud.messagex.exception.CoreException
 import io.vertx.core.AsyncResult
@@ -25,16 +26,16 @@ class TokenProvider {
     companion object {
         private val TOKEN_PROVIDER = TokenProvider()
         private val F = arrayListOf(
-                "/",
-                "/favicon.ico",
+            "/",
+            "/favicon.ico",
 
-                "/upload",
+            "/upload",
 
 
-                "/admin/system/login",
-                "/admin/system/upload",
+            "/admin/system/login",
+            "/admin/system/upload",
         )
-        private val Q = arrayListOf("/open/")
+        private val Q = arrayListOf("/index")
 
         fun Route.authenticateHandler(role: String): Route {
             return handler { ctx ->
@@ -125,16 +126,31 @@ class TokenProvider {
 //                }
                 "API" -> {
                     val user = MySQLCore.getCore().queryFirst(
-                            """
+                        """
                         SELECT * FROM e_user WHERE token = ?
                     """,
-                            arrayListOf(token),
-                            UserDO::class.java
+                        arrayListOf(token),
+                        UserDO::class.java
                     )
                     user?.let {
                         session.id = user.id
                         session.token = user.token
                         session.status = user.status
+                        RedisCore.getCore().setex(token, Config.R_T_30M, Json.encode(session))
+                    }
+                }
+                "CHANNEL" -> {
+                    val channel = MySQLCore.getCore().queryFirst(
+                        """
+                        SELECT * FROM m_channel WHERE `key` = ?
+                    """,
+                        arrayListOf(token),
+                        ChannelDO::class.java
+                    )
+                    channel?.let {
+                        session.id = channel.id
+                        session.token = channel.key
+                        session.status = 1
                         RedisCore.getCore().setex(token, Config.R_T_30M, Json.encode(session))
                     }
                 }

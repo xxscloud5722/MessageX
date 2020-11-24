@@ -147,8 +147,6 @@ abstract class BaseModule {
     }
 
     private fun h(ctx: RoutingContext, type: ResponseType, time: Long, semaphore: Semaphore? = null, fn: suspend () -> Unit) {
-        val client = getClient(ctx)
-        val startTime = System.currentTimeMillis()
         GlobalScope.launch(ctx.vertx().dispatcher() + CoroutineName("http") +
                 CoroutineExceptionHandler { _, ex ->
                     ctx.fail(ex)

@@ -41,7 +41,10 @@ object BeanUtils {
             //设置方法
             val setName = "set" + item.name.substring(0, 1).toUpperCase() + item.name.substring(1)
             val setMethod = clazz.methods.find { m -> m.name == setName } ?: return@forEach
-            setMethod.invoke(data, getValue(item.type, getMethod.invoke(obj)))
+            val flag = getMethod.invoke(obj)
+            if (flag != null) {
+                setMethod.invoke(data, getValue(item.type, flag))
+            }
         }
         return data
     }

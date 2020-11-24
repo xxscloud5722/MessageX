@@ -21,7 +21,6 @@ class WebSocketCore {
         private val log = LoggerFactory.getLogger(WebSocketCore::class.java)
     }
 
-
     fun get(): ConcurrentHashMap<String, USession> {
         return userList
     }
