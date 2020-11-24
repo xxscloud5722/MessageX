@@ -127,7 +127,7 @@ class TokenProvider {
                 "API" -> {
                     val user = MySQLCore.getCore().queryFirst(
                         """
-                        SELECT * FROM e_user WHERE token = ?
+                        SELECT * FROM m_user WHERE token = ?
                     """,
                         arrayListOf(token),
                         UserDO::class.java

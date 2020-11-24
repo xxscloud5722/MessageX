@@ -16,8 +16,7 @@ import org.apache.commons.beanutils.BeanUtils
 
 class MessageService @Inject constructor(
     private val messageDAO: MessageDAO,
-    private val messageQueueDAO: MessageQueueDAO,
-    private val userGroupDAO: UserGroupDAO
+    private val messageQueueDAO: MessageQueueDAO
 ) {
 
 
@@ -25,7 +24,11 @@ class MessageService @Inject constructor(
         return messageDAO.getById(id)
     }
 
-    suspend fun getMessageList(id: String, messageId: String): List<MessageDTO> {
-        return messageDAO.getMessageList(id, messageId)
+    suspend fun getMessageList(userId: String, messageId: String, status: Int): List<MessageDTO> {
+        return messageDAO.getMessageList(userId, messageId, status)
+    }
+
+    suspend fun markMessage(userId: String, messageId: String): Boolean {
+        return messageQueueDAO.markMessage(userId, messageId)
     }
 }

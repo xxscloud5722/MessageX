@@ -1,6 +1,7 @@
 package com.xxscloud.messagex.listener
 
 import com.google.inject.Inject
+import com.xxscloud.messagex.core.JsonUtils
 import com.xxscloud.messagex.core.WebSocketCore
 import com.xxscloud.messagex.dao.MessageDAO
 import com.xxscloud.messagex.dao.MessageQueueDAO
@@ -13,7 +14,12 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
-class MessageListener @Inject constructor(vertx: Vertx, private val messageDAO: MessageDAO, private val messageQueueDAO: MessageQueueDAO) {
+class MessageListener @Inject constructor(
+    vertx: Vertx,
+    private val messageDAO: MessageDAO,
+    private val messageQueueDAO: MessageQueueDAO,
+    private val webSocketCore: WebSocketCore
+) {
     private val log = LoggerFactory.getLogger(MessageListener::class.java)
 
     init {
@@ -26,12 +32,11 @@ class MessageListener @Inject constructor(vertx: Vertx, private val messageDAO: 
     }
 
     private suspend fun run(event: MessageEvent) {
-        val message = messageDAO.getById(event.messageId) ?: return
-        message.content = ""
+        val message = messageDAO.getAbstractById(event.messageId) ?: return
         val userList = messageQueueDAO.getByMessageId(event.messageId)
         log.info("[消息]: 本次推送人数 ${userList.size}, 内容 ${Json.encode(message)}")
         userList.forEach {
-            //WebSocketCore.sendText(it.id, "message ${Json.encode(message)}")
+            webSocketCore.send(it.id, JsonUtils.stringify(message))
         }
     }
 }

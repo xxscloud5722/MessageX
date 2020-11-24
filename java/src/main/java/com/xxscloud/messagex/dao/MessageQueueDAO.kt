@@ -8,15 +8,15 @@ import io.vertx.ext.sql.SQLConnection
 
 
 class MessageQueueDAO @Inject constructor(private val sqlCore: MySQLCore) {
-    suspend fun insert(id: String, recipient: String, transaction: SQLConnection? = null): Boolean {
+    suspend fun insert(messageId: String, userId: String, transaction: SQLConnection? = null): Boolean {
         val sql = SQL(
             """
                 INSERT INTO `m_message_queue`(`user_id`, `message_id`) 
-                VALUES (recipient, id);
+                VALUES (#{userId}, #{messageId});
             """
         )
-        sql.add("id", id)
-        sql.add("recipient", recipient)
+        sql.add("messageId", messageId)
+        sql.add("userId", userId)
         return sqlCore.insert(
             sql, transaction
         )
@@ -34,5 +34,17 @@ class MessageQueueDAO @Inject constructor(private val sqlCore: MySQLCore) {
         return sqlCore.query(
             sql, UserDO::class.java, transaction
         )
+    }
+
+    suspend fun markMessage(userId: String, messageId: String, transaction: SQLConnection? = null): Boolean {
+        val sql = SQL(
+            """
+                UPDATE m_message_queue SET status = 1, read_time = NOW() 
+                WHERE message_id = #{messageId} AND user_id = #{userId}
+            """
+        )
+        sql.add("messageId", messageId)
+        sql.add("userId", userId)
+        return sqlCore.update(sql, transaction)
     }
 }

@@ -33,7 +33,7 @@ enum class ExceptionMessageEnum(val code: String, val message: String) {
     USER_REPORT_NULL("2222", "您还没有注册"),
     USER_REPORT_NO_MATCH("2222", "抱歉~, 报表是其他人的微信的"),
     WE_CHAT_CODE_ERROR("2322", "微信代码错误"),
-    ACCOUNT_NULL("2312", "账号未注册"),
+    ACCOUNT_NULL("2312", "账号不存在"),
     ACCOUNT_EXIST("2312", "账号已存在"),
     ACCOUNT_OR_PASSWORD_ERROR("2312", "账号密码不正确"),
     OSS_ID_ERROR("5672", "资源Id错误"),

@@ -59,6 +59,7 @@ class SocketVerticle : CoroutineVerticle() {
         webSocket.closeHandler {
             webSocketCore.remove(user.id)
         }
+
         //添加用户数据
         webSocketCore.add(user, webSocket)
     }

@@ -12,8 +12,8 @@ class MessageDAO @Inject constructor(private val sqlCore: MySQLCore) {
     suspend fun insert(messageDO: MessageDO, transaction: SQLConnection? = null): Boolean {
         val sql = SQL(
             """
-                 INSERT INTO `m_message`( `title`, `abstract`, `cover`, `content`) 
-                    VALUES (#{title}, #{abstract}, #{cover}, #{content});
+                 INSERT INTO `m_message`(`sender`, `title`, `abstract`, `cover`, `content`) 
+                    VALUES (#{sender}, #{title}, #{abstract}, #{cover}, #{content});
             """
         )
         sql.add(messageDO)
@@ -28,7 +28,7 @@ class MessageDAO @Inject constructor(private val sqlCore: MySQLCore) {
     suspend fun getById(id: String, transaction: SQLConnection? = null): MessageDO? {
         val sql = SQL(
             """
-                  SELECT * FROM m_message WHERE id = ?
+                  SELECT * FROM m_message WHERE id = #{id}
             """
         )
         sql.add("id", id)
@@ -37,16 +37,31 @@ class MessageDAO @Inject constructor(private val sqlCore: MySQLCore) {
         )
     }
 
-    suspend fun getMessageList(id: String, messageId: String, transaction: SQLConnection? = null): List<MessageDTO> {
+    suspend fun getAbstractById(id: String, transaction: SQLConnection? = null): MessageDO? {
+        val sql = SQL(
+            """
+                  SELECT id, title, abstract, cover FROM m_message WHERE id = #{id}
+            """
+        )
+        sql.add("id", id)
+        return sqlCore.queryFirst(
+            sql, MessageDO::class.java, transaction
+        )
+    }
+
+    suspend fun getMessageList(id: String, messageId: String, status: Int, transaction: SQLConnection? = null): List<MessageDTO> {
         val sql = SQL(
             """
                 SELECT mm.id, mm.title, mm.abstract, mm.cover, mm.create_time FROM m_message mm
                 LEFT JOIN m_message_queue mmq ON mmq.message_id = mm.id
-                WHERE mmq.user_id = #{id} AND mmq.status = 0
             """
         )
-        sql.where {
-            sql.join("AND mm.id < #{messageId}", messageId.isNotEmpty())
+        sql.where { it ->
+            it.trim {
+                it.join("AND mmq.status = #{status}", status >= 0)
+                it.join("AND mmq.user_id = #{id}", messageId.isNotEmpty())
+                it.join("AND mm.id < #{messageId}", messageId.isNotEmpty() && messageId.toInt() > 0)
+            }
         }
         sql.join(
             """ 
@@ -55,6 +70,7 @@ class MessageDAO @Inject constructor(private val sqlCore: MySQLCore) {
         """
         )
         sql.add("id", id)
+        sql.add("status", status)
         sql.add("messageId", messageId)
         return sqlCore.query(
             sql, MessageDTO::class.java, transaction
